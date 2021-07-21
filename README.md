@@ -19,5 +19,5 @@ git clone https://github.com/JC-ProgJava/EpsilonAI
 **Note that EpsilonAI requires Java 12+.**
 
 ## Quick Links
-- [Getting Started] (https://jc-progjava.gitbook.io/epsilonai/getting-started)
-- [Release Notes] (https://jc-progjava.gitbook.io/epsilonai/release-notes)
+- [Getting Started](https://jc-progjava.gitbook.io/epsilonai/getting-started)
+- [Release Notes](https://jc-progjava.gitbook.io/epsilonai/release-notes)
