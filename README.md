@@ -3,6 +3,8 @@
 </div>
   
 # EpsilonAI
+[![CodeFactor](https://www.codefactor.io/repository/github/jc-progjava/epsilonai/badge)](https://www.codefactor.io/repository/github/jc-progjava/epsilonai)
+
 A simple machine learning framework built for Java applications.
 
 ## Documentation
