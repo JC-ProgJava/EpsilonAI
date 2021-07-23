@@ -12,8 +12,8 @@ import java.util.Scanner;
 public class NetworkTest {
   public static double actual = 0;
 
-  public static void main(String[] args) throws IOException, ClassNotFoundException {
-    String filename = "/Users/JC/IdeaProjects/ML/network.epsilon";
+  public static void main(String[] args) throws IOException {
+    String filename = "/Users/JC/IdeaProjects/EpsilonAI/mynetwork.epsilon";
     ArrayList<String> filenames = new ArrayList<>();
     for (int x = 60001; x <= 70000; x++) {
       filenames.add("/Users/JC/Desktop/Digit-Recogn/data/" + String.format("%05d", x) + ".txt");

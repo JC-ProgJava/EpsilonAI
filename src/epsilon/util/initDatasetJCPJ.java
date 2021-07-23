@@ -3,32 +3,62 @@ package epsilon.util;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.util.Arrays;
 
 public class initDatasetJCPJ {
   public static void main(String[] args) throws IOException {
     double[][] input = new double[107730][784];
-    System.out.println(Arrays.toString(scan("/Users/JC/Desktop/dataset/0/0\\0.png")));
-  }
-
-  public static double[] scan(String filename) throws IOException {
-    File input = new File(filename);
-    BufferedImage image = ImageIO.read(input);
-    Graphics2D bGr = image.createGraphics();
-    bGr.drawImage(image, 0, 0, null);
-    bGr.dispose();
-    double[] a = new double[784];
+    double[][] output = new double[107730][10];
+    String filepath = "/Users/JC/Desktop/dataset/";
     int counter = 0;
-    for (int i = 0; i < 28; i++) {
-      for (int j = 0; j < 28; j++) {
-        Color c = new Color(image.getRGB(j, i));
-        a[counter] = 255.0 - (((double) c.getRed()) * 0.30) - (((double) c.getGreen()) * 0.59) - (((double) c.getBlue()) * 0.11);
-        a[counter] /= 255.0;
+    for (int i = 0; i < 10773; i++) {
+      if (i % 1000 == 0) {
+        System.out.println(i + "/" + 10772);
+      }
+      for (int fold = 0; fold < 10; fold++) {
+        input[counter] = scan(filepath + fold + "/" + fold + "\\" + i + ".png");
+        Arrays.fill(output[counter], 0.0);
+        output[counter][fold] = 1.0;
         counter++;
       }
     }
-    return a;
+    try (ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream("inputJCPJ.ser")))) {
+      oos.writeObject(input);
+    } catch (IOException ex) {
+      ex.printStackTrace();
+    }
+
+    try (ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream("outputJCPJ.ser")))) {
+      oos.writeObject(output);
+    } catch (IOException ex) {
+      ex.printStackTrace();
+    }
+  }
+
+  private static boolean isTransparent(int val) {
+    return val >> 24 == 0;
+  }
+
+  public static double[] scan(String filename) throws IOException {
+    BufferedImage image = ImageIO.read(new File(filename));
+    double[] in = new double[784];
+    int counter = 0;
+    for (int i = 0; i < image.getHeight(); i++) {
+      for (int j = 0; j < image.getWidth(); j++) {
+        Color color = new Color(image.getRGB(j, i), true);
+        if (isTransparent(image.getRGB(j, i))) {
+          color = new Color(255, 255, 255);
+        }
+        int r = color.getRed();
+        int g = color.getGreen();
+        int b = color.getBlue();
+        in[counter] = 255.0 - (((double) r) * 0.30) - (((double) g) * 0.59) - (((double) b) * 0.11);
+        in[counter] /= 255;
+        counter++;
+      }
+    }
+
+    return in;
   }
 }

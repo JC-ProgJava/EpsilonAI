@@ -13,12 +13,19 @@ public class MNIST {
 
   public MNIST() {
     try {
-      File dir = new File(String.valueOf(MNIST.class.getResource("MNIST.zip").getFile())).getParentFile();
-      if (!Files.exists(Path.of(MNIST.class.getResource("MNIST.zip").getFile()))) {
-        extract(new ZipInputStream(new FileInputStream(String.valueOf(MNIST.class.getResource("MNIST.zip").getFile()))), dir);
+      Path path = Files.createTempFile(null, null);
+      InputStream stream = MNIST.class.getResourceAsStream("MNIST.zip");
+      OutputStream outStream = new FileOutputStream(path.toFile());
+
+      byte[] buffer = new byte[2048];
+      int bytesRead;
+      while ((bytesRead = stream.read(buffer)) != -1) {
+        outStream.write(buffer, 0, bytesRead);
       }
-      ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(new FileInputStream(dir.getAbsolutePath() + File.separator + "MNIST" + File.separator + "input.ser")));
-      ObjectInputStream oiss = new ObjectInputStream(new BufferedInputStream(new FileInputStream(dir.getAbsolutePath() + File.separator + "MNIST" + File.separator + "target.ser")));
+
+      extract(new ZipInputStream(new FileInputStream(path.toString())), new File(path.getParent().toString()));
+      ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(new FileInputStream(path.getParent().toString() + File.separator + "MNIST" + File.separator + "input.ser")));
+      ObjectInputStream oiss = new ObjectInputStream(new BufferedInputStream(new FileInputStream(path.getParent().toString() + File.separator + "MNIST" + File.separator + "target.ser")));
       inputs = (double[][]) ois.readObject();
       target = (double[][]) oiss.readObject();
     } catch (IOException | ClassNotFoundException | NullPointerException ex) {

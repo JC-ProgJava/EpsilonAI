@@ -16,6 +16,7 @@ public class Network implements Serializable {
       Object[] objects = (Object[]) ois.readObject();
       double[][][] weights = (double[][][]) objects[0];
       ActivationFunction[] activationFunctions = (ActivationFunction[]) objects[1];
+      Error type = (Error) objects[2];
       boolean isOutputLayer = false;
       layers = new Layer[weights.length];
 
@@ -27,7 +28,7 @@ public class Network implements Serializable {
         if (i == weights.length - 1) {
           isOutputLayer = true;
         }
-        Layer matrix = new Layer(vectors, isOutputLayer, activationFunctions[i]);
+        Layer matrix = new Layer(vectors, isOutputLayer, activationFunctions[i], type);
         layers[i] = matrix;
       }
     } catch (IOException | ClassNotFoundException | ClassCastException e) {
@@ -35,29 +36,29 @@ public class Network implements Serializable {
     }
   }
 
-  public Network(Matrix config, ActivationFunction[] activationFunction) {
+  public Network(Matrix config, ActivationFunction[] activationFunction, Error errorType) {
     if (config.length() != activationFunction.length) {
-      throw new IllegalArgumentException("Network(Matrix, double, ActivationFunction[], Optimizer): Matrix length different from ActivationFunction[].");
+      throw new IllegalArgumentException("Network(Matrix, ActivationFunction[], Error errorType): Matrix length different from ActivationFunction[].");
     }
 
     layers = new Layer[config.length()];
 
     for (int i = 0; i < config.length(); i++) {
       if (i == config.length() - 1) {
-        layers[i] = new Layer(true, activationFunction[i]).fillGaussian((int) config.get(i).get(0), (int) config.get(i).get(1));
+        layers[i] = new Layer(true, activationFunction[i], errorType).fillGaussian((int) config.get(i).get(0), (int) config.get(i).get(1));
       } else {
-        layers[i] = new Layer(false, activationFunction[i]).fillGaussian((int) config.get(i).get(0), (int) config.get(i).get(1));
+        layers[i] = new Layer(false, activationFunction[i], errorType).fillGaussian((int) config.get(i).get(0), (int) config.get(i).get(1));
       }
     }
   }
 
-  public Network(Matrix config, ActivationFunction[] activationFunction, InitChoice initChoice) {
+  public Network(Matrix config, ActivationFunction[] activationFunction, Error errorType, InitChoice initChoice) {
     if (config.length() != activationFunction.length) {
-      throw new IllegalArgumentException("Network(Matrix, double, ActivationFunction[], Optimizer): Matrix length different from ActivationFunction[].");
+      throw new IllegalArgumentException("Network(Matrix, ActivationFunction[], Error, InitChoice): Matrix length different from ActivationFunction[].");
     }
 
     for (int i = 0; i < config.length(); i++) {
-      Layer layer = new Layer(i == (config.length() - 1), activationFunction[i]);
+      Layer layer = new Layer(i == (config.length() - 1), activationFunction[i], errorType);
       switch (initChoice) {
         case ZERO:
           layer = layer.fillZeros((int) config.get(i).get(0), (int) config.get(i).get(1));
@@ -80,7 +81,7 @@ public class Network implements Serializable {
 
     for (int iter = 1; iter <= epoch; iter++) {
       for (int index = 0; index < input.length; index++) {
-        if (index % 1000 == 0 && index > 0) {
+        if (index % 5000 == 0 && index > 0) {
           System.out.println(index + " / " + input.length);
         }
         // todo() <--
@@ -110,6 +111,7 @@ public class Network implements Serializable {
 
     double[][][] weights = new double[layers.length][][];
     ActivationFunction[] activationFunctions = new ActivationFunction[layers.length];
+    Error type = layers[layers.length - 1].getErrorType();
     for (int i = 0; i < layers.length; i++) {
       double[][] layerWeights = new double[layers[i].length()][];
       for (int j = 0; j < layerWeights.length; j++) {
@@ -119,7 +121,7 @@ public class Network implements Serializable {
       weights[i] = layerWeights;
     }
 
-    Object[] objects = {weights, activationFunctions};
+    Object[] objects = {weights, activationFunctions, type};
 
     try (ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(name)))) {
       oos.writeObject(objects);

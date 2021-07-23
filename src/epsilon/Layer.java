@@ -5,6 +5,7 @@ import java.io.Serializable;
 class Layer implements Serializable {
   private final boolean isOutputLayer;
   private final ActivationFunction activationFunction;
+  private final Error errorType;
   private Vector[] vectors;
   transient private Vector[] prevUpdate;
   transient private Vector[] adaptDelta;
@@ -14,15 +15,17 @@ class Layer implements Serializable {
   transient private Vector error;
   transient private Vector displayError;
 
-  Layer(boolean isOutputLayer, ActivationFunction activationFunction) {
+  Layer(boolean isOutputLayer, ActivationFunction activationFunction, Error errorType) {
     this.isOutputLayer = isOutputLayer;
     this.activationFunction = activationFunction;
+    this.errorType = errorType;
   }
 
-  Layer(Vector[] vectorList, boolean isOutputLayer, ActivationFunction activationFunction) {
+  Layer(Vector[] vectorList, boolean isOutputLayer, ActivationFunction activationFunction, Error errorType) {
     vectors = vectorList;
     this.isOutputLayer = isOutputLayer;
     this.activationFunction = activationFunction;
+    this.errorType = errorType;
   }
 
   Vector[] vectors() {
@@ -229,20 +232,46 @@ class Layer implements Serializable {
       Vector error;
       Vector vect = vectors()[index];
       if (isOutputLayer) {
-        error = (output.subtract(targetOutput)).mult(derivative(index));
-        displayError = displayError.add(error.mult(error));
+        Vector[] errorCalc = calcError(output, targetOutput);
+        error = errorCalc[0].mult(derivative(index));
+        displayError = displayError.add(errorCalc[1]);
       } else {
         error = new Vector(vectors().length).fillZeros();
         for (int indice = 0; indice < nextLayer.vectors().length; indice++) {
           error = error.add(nextLayer.vectors()[indice].get(index) * nextLayer.getError().get(indice));
         }
-        error = error.mult(derivative(index).get(index));
+        error = error.mult(derivative(index));
       }
       this.error = error;
       Vector delta = input.mult(error.get(index));
       delta = applyOptimizer(delta, index, alpha);
       vect = vect.subtract(delta);
       vectors()[index] = vect;
+    }
+  }
+
+  Error getErrorType() {
+    return errorType;
+  }
+
+  private Vector[] calcError(Vector output, Vector targetOutput) {
+    switch (errorType) {
+      case MEAN_SQUARED: {
+        Vector err = output.subtract(targetOutput);
+        return new Vector[]{err, err.mult(err)};
+      }
+      case MEAN_ABSOLUTE: {
+        Vector display = output.subtract(targetOutput);
+        Vector err = new Vector(display.length());
+        for (int i = 0; i < err.length(); i++) {
+          display.set(i, display.get(i) > 0 ? display.get(i) : -display.get(i));
+          err.set(i, output.get(i) >= targetOutput.get(i) ? -1 : 1);
+        }
+        return new Vector[]{err, display};
+      }
+
+      default:
+        throw new IllegalArgumentException("calcError(): Error type " + errorType + " unknown.");
     }
   }
 
