@@ -36,38 +36,38 @@ public class Network implements Serializable {
     }
   }
 
-  public Network(Matrix config, ActivationFunction[] activationFunction, Error errorType) {
-    if (config.length() != activationFunction.length) {
-      throw new IllegalArgumentException("Network(Matrix, ActivationFunction[], Error errorType): Matrix length different from ActivationFunction[].");
+  public Network(Vector config, ActivationFunction[] activationFunction, Error errorType) {
+    if ((config.length() - 1) != activationFunction.length) {
+      throw new IllegalArgumentException("Network(Vector, ActivationFunction[], Error errorType): Vector length must be one more than ActivationFunction[] length.");
     }
 
-    layers = new Layer[config.length()];
+    layers = new Layer[activationFunction.length];
 
-    for (int i = 0; i < config.length(); i++) {
-      if (i == config.length() - 1) {
-        layers[i] = new Layer(true, activationFunction[i], errorType).fillGaussian((int) config.get(i).get(0), (int) config.get(i).get(1));
+    for (int i = 0; i < config.length() - 1; i++) {
+      if (i == layers.length - 1) {
+        layers[i] = new Layer(true, activationFunction[i], errorType).fillGaussian((int) config.get(i), (int) config.get(i + 1));
       } else {
-        layers[i] = new Layer(false, activationFunction[i], errorType).fillGaussian((int) config.get(i).get(0), (int) config.get(i).get(1));
+        layers[i] = new Layer(false, activationFunction[i], errorType).fillGaussian((int) config.get(i), (int) config.get(i + 1));
       }
     }
   }
 
-  public Network(Matrix config, ActivationFunction[] activationFunction, Error errorType, InitChoice initChoice) {
-    if (config.length() != activationFunction.length) {
-      throw new IllegalArgumentException("Network(Matrix, ActivationFunction[], Error, InitChoice): Matrix length different from ActivationFunction[].");
+  public Network(Vector config, ActivationFunction[] activationFunction, Error errorType, InitChoice initChoice) {
+    if ((config.length() - 1) != activationFunction.length) {
+      throw new IllegalArgumentException("Network(Vector, ActivationFunction[], Error, InitChoice): Vector length must be one more than ActivationFunction[] length.");
     }
 
-    for (int i = 0; i < config.length(); i++) {
-      Layer layer = new Layer(i == (config.length() - 1), activationFunction[i], errorType);
+    for (int i = 0; i < config.length() - 1; i++) {
+      Layer layer = new Layer(i == (config.length() - 2), activationFunction[i], errorType);
       switch (initChoice) {
         case ZERO:
-          layer = layer.fillZeros((int) config.get(i).get(0), (int) config.get(i).get(1));
+          layer = layer.fillZeros((int) config.get(i), (int) config.get(i + 1));
           break;
         case RANDOM:
-          layer = layer.fillRandom((int) config.get(i).get(0), (int) config.get(i).get(1));
+          layer = layer.fillRandom((int) config.get(i), (int) config.get(i + 1));
           break;
         case GAUSSIAN:
-          layer = layer.fillGaussian((int) config.get(i).get(0), (int) config.get(i).get(1));
+          layer = layer.fillGaussian((int) config.get(i), (int) config.get(i + 1));
           break;
       }
       layers[i] = layer;
@@ -81,7 +81,7 @@ public class Network implements Serializable {
 
     for (int iter = 1; iter <= epoch; iter++) {
       for (int index = 0; index < input.length; index++) {
-        if (index % 5000 == 0 && index > 0) {
+        if (index % 1000 == 0 && index > 0) {
           System.out.println(index + " / " + input.length);
         }
         // todo() <--
@@ -126,7 +126,7 @@ public class Network implements Serializable {
     try (ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(name)))) {
       oos.writeObject(objects);
     } catch (IOException ex) {
-      ex.printStackTrace();
+      System.err.printf("Cannot export to %s.\n", name);
     }
   }
 

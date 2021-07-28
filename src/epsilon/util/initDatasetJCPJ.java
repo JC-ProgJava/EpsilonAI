@@ -14,10 +14,10 @@ public class initDatasetJCPJ {
     int counter = 0;
     for (int i = 0; i < 10773; i++) {
       if (i % 1000 == 0) {
-        System.out.println(i + "/" + 10772);
+        System.out.println(i + File.separator + 10772);
       }
       for (int fold = 0; fold < 10; fold++) {
-        input[counter] = scan(filepath + fold + "/" + fold + "\\" + i + ".png");
+        input[counter] = scan(filepath + fold + File.separator + fold + "\\" + i + ".png");
         Arrays.fill(output[counter], 0.0);
         output[counter][fold] = 1.0;
         counter++;

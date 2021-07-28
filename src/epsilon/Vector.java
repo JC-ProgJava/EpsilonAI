@@ -12,7 +12,16 @@ public class Vector implements Serializable {
     vect = new double[size];
   }
 
-  public Vector(double[] vals) {
+  public Vector(int[] vals) {
+    assert vect.length == 0;
+
+    vect = new double[vals.length];
+    for (int i = 0; i < vals.length; i++) {
+      vect[i] = vals[i];
+    }
+  }
+
+  Vector(double[] vals) {
     assert vect.length == 0;
     vect = vals;
   }
@@ -172,6 +181,15 @@ public class Vector implements Serializable {
     return sqrt;
   }
 
+  Vector log() {
+    int size = length();
+    Vector log = new Vector(size);
+    for (int i = 0; i < size; i++) {
+      log.set(i, Math.log(get(i)));
+    }
+    return log;
+  }
+
   Vector initGaussianDistribute() {
     for (int i = 0; i < length(); i++) {
       set(i, rand.nextGaussian());
@@ -180,10 +198,6 @@ public class Vector implements Serializable {
   }
 
   Vector fillGaussian(double average, double deviation) {
-    if (length() < 0) {
-      throw new IllegalArgumentException("init(size, start, end): 'size' must be bigger than 0. Given value: '" + length() + "'.");
-    }
-
     for (int i = 0; i < length(); i++) {
       set(i, rand.nextGaussian() * average + deviation);
     }

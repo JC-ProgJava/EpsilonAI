@@ -153,6 +153,9 @@ class Layer implements Serializable {
       total += Math.exp(val.get(i));
     }
 
+    if (total == 0) {
+      throw new ArithmeticException("softmax(Vector val): total is 0, cannot divide by 0.");
+    }
     for (int i = 0; i < valLength; i++) {
       out.set(i, Math.exp(val.get(i)) / total);
     }
@@ -194,7 +197,7 @@ class Layer implements Serializable {
           if (i == index) {
             returnVector.set(i, softmax(output).get(i) * (1.0 - softmax(output).get(i)));
           } else {
-            returnVector.set(i, softmax(output).get(i) * -softmax(output).get(i));
+            returnVector.set(i, -1.0 * softmax(output).get(i) * softmax(output).get(index));
           }
         }
 
@@ -232,8 +235,8 @@ class Layer implements Serializable {
       Vector error;
       Vector vect = vectors()[index];
       if (isOutputLayer) {
-        Vector[] errorCalc = calcError(output, targetOutput);
-        error = errorCalc[0].mult(derivative(index));
+        Vector[] errorCalc = calcError(output, targetOutput, index);
+        error = errorCalc[0];
         displayError = displayError.add(errorCalc[1]);
       } else {
         error = new Vector(vectors().length).fillZeros();
@@ -254,10 +257,10 @@ class Layer implements Serializable {
     return errorType;
   }
 
-  private Vector[] calcError(Vector output, Vector targetOutput) {
+  private Vector[] calcError(Vector output, Vector targetOutput, int index) {
     switch (errorType) {
       case MEAN_SQUARED: {
-        Vector err = output.subtract(targetOutput);
+        Vector err = output.subtract(targetOutput).mult(derivative(index));
         return new Vector[]{err, err.mult(err)};
       }
       case MEAN_ABSOLUTE: {
@@ -267,59 +270,75 @@ class Layer implements Serializable {
           display.set(i, display.get(i) > 0 ? display.get(i) : -display.get(i));
           err.set(i, output.get(i) >= targetOutput.get(i) ? -1 : 1);
         }
+        err = err.mult(derivative(index));
         return new Vector[]{err, display};
       }
-
+      case CROSS_ENTROPY: {
+        Vector display = targetOutput.mult(output.log()).mult(-1.0);
+        Vector err = output.subtract(targetOutput);
+        return new Vector[]{err, display};
+      }
       default:
         throw new IllegalArgumentException("calcError(): Error type " + errorType + " unknown.");
     }
   }
 
   Vector applyOptimizer(Vector delta, int index, double alpha) {
-    if (optimizer == Optimizer.MOMENTUM) {
-      delta = delta.mult(alpha).add(prevUpdate[index].mult(0.9));
-      prevUpdate[index] = delta;
-    } else if (optimizer == Optimizer.ADAGRAD) {
-      double epsilon = 1e-4;
-      Vector finalAlpha = new Vector(vectors()[index].length());
-      for (int i = 0; i < vectors()[index].length(); i++) {
-        finalAlpha.set(i, alpha / Math.sqrt(prevUpdate[index].get(i) + epsilon));
-        prevUpdate[index].set(i, prevUpdate[index].get(i) + delta.get(i) * delta.get(i));
+    switch (optimizer) {
+      case MOMENTUM:
+        delta = delta.mult(alpha).add(prevUpdate[index].mult(0.9));
+        prevUpdate[index] = delta;
+        break;
+      case ADAGRAD: {
+        double epsilon = 1e-4;
+        Vector finalAlpha = new Vector(vectors()[index].length());
+        for (int i = 0; i < vectors()[index].length(); i++) {
+          finalAlpha.set(i, alpha / Math.sqrt(prevUpdate[index].get(i) + epsilon));
+          prevUpdate[index].set(i, prevUpdate[index].get(i) + delta.get(i) * delta.get(i));
+        }
+        delta = delta.mult(finalAlpha);
+        break;
       }
-      delta = delta.mult(finalAlpha);
-    } else if (optimizer == Optimizer.RMSPROP) {
-      double epsilon = 1e-4;
-      double beta = 0.9;
-      Vector finalAlpha = new Vector(vectors()[index].length());
-      for (int i = 0; i < vectors()[index].length(); i++) {
-        finalAlpha.set(i, alpha / Math.sqrt(prevUpdate[index].get(i) + epsilon));
-        prevUpdate[index].set(i, prevUpdate[index].get(i) * beta + (1.0 - beta) * delta.get(i) * delta.get(i));
+      case RMSPROP: {
+        double epsilon = 1e-4;
+        double beta = 0.9;
+        Vector finalAlpha = new Vector(vectors()[index].length());
+        for (int i = 0; i < vectors()[index].length(); i++) {
+          finalAlpha.set(i, alpha / Math.sqrt(prevUpdate[index].get(i) + epsilon));
+          prevUpdate[index].set(i, prevUpdate[index].get(i) * beta + (1.0 - beta) * delta.get(i) * delta.get(i));
+        }
+        delta = delta.mult(finalAlpha);
+        break;
       }
-      delta = delta.mult(finalAlpha);
-    } else if (optimizer == Optimizer.ADADELTA) {
-      double epsilon = 1e-6;
-      double beta = 0.95;
-      Vector finalAlpha = new Vector(vectors()[index].length());
-      for (int i = 0; i < vectors()[index].length(); i++) {
-        finalAlpha.set(i, Math.sqrt(adaptDelta[index].get(i) + epsilon) / Math.sqrt(prevUpdate[index].get(i) + epsilon));
-        prevUpdate[index].set(i, prevUpdate[index].get(i) * beta + (1.0 - beta) * delta.get(i) * delta.get(i));
-        double adaptD = delta.get(i) * -finalAlpha.get(i);
-        adaptDelta[index].set(i, adaptDelta[index].get(i) * beta + (1.0 - beta) * adaptD * adaptD);
+      case ADADELTA: {
+        double epsilon = 1e-6;
+        double beta = 0.95;
+        Vector finalAlpha = new Vector(vectors()[index].length());
+        for (int i = 0; i < vectors()[index].length(); i++) {
+          finalAlpha.set(i, Math.sqrt(adaptDelta[index].get(i) + epsilon) / Math.sqrt(prevUpdate[index].get(i) + epsilon));
+          prevUpdate[index].set(i, prevUpdate[index].get(i) * beta + (1.0 - beta) * delta.get(i) * delta.get(i));
+          double adaptD = delta.get(i) * -finalAlpha.get(i);
+          adaptDelta[index].set(i, adaptDelta[index].get(i) * beta + (1.0 - beta) * adaptD * adaptD);
+        }
+        delta = delta.mult(finalAlpha);
+        break;
       }
-      delta = delta.mult(finalAlpha);
-    } else if (optimizer == Optimizer.ADAM) {
-      double epsilon = 1e-8;
-      double beta1 = 0.9;
-      double beta2 = 0.999;
-      Vector finalAlpha = new Vector(vectors()[index].length());
-      for (int i = 0; i < vectors()[index].length(); i++) {
-        prevUpdate[index].set(i, prevUpdate[index].get(i) * beta1 + (1.0 - beta1) * delta.get(i));
-        adaptDelta[index].set(i, adaptDelta[index].get(i) * beta2 + (1.0 - beta2) * delta.get(i) * delta.get(i));
-        finalAlpha.set(i, alpha / (Math.sqrt((adaptDelta[index].get(i)) / (1.0 - beta2)) + epsilon));
+      case ADAM: {
+        double epsilon = 1e-7;
+        double beta1 = 0.9;
+        double beta2 = 0.999;
+        Vector finalAlpha = new Vector(vectors()[index].length());
+        for (int i = 0; i < vectors()[index].length(); i++) {
+          prevUpdate[index].set(i, prevUpdate[index].get(i) * beta1 + (1.0 - beta1) * delta.get(i));
+          adaptDelta[index].set(i, adaptDelta[index].get(i) * beta2 + (1.0 - beta2) * delta.get(i) * delta.get(i));
+          finalAlpha.set(i, alpha / (Math.sqrt((adaptDelta[index].get(i)) / (1.0 - beta2)) + epsilon));
+        }
+        delta = prevUpdate[index].div(1.0 - beta1).mult(finalAlpha);
+        break;
       }
-      delta = prevUpdate[index].div(1.0 - beta1).mult(finalAlpha);
-    } else {
-      delta = delta.mult(alpha);
+      default:
+        delta = delta.mult(alpha);
+        break;
     }
     return delta;
   }

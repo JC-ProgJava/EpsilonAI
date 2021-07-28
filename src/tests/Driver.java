@@ -2,7 +2,6 @@ package tests;
 
 import epsilon.Error;
 import epsilon.*;
-import epsilon.dataset.ExtendMNIST;
 import epsilon.dataset.MNIST;
 
 import java.io.IOException;
@@ -30,28 +29,17 @@ public class Driver {
 //    System.out.println("Done!");
 //    System.out.println(Arrays.toString(digits));
 
-
-    Matrix config = new Matrix(4);
-    config.set(0, new Vector(new double[]{784, 128}));
-    config.set(1, new Vector(new double[]{128, 64}));
-    config.set(2, new Vector(new double[]{64, 32}));
-    config.set(3, new Vector(new double[]{32, 10}));
+    Vector config = new Vector(new int[]{784, 32, 10});
 
     ActivationFunction[] af = new ActivationFunction[]{
             ActivationFunction.SIGMOID,
-            ActivationFunction.SIGMOID,
-            ActivationFunction.SIGMOID,
-            ActivationFunction.SIGMOID
+            ActivationFunction.SOFTMAX
     };
 
-
+    Network network = new Network(config, af, Error.CROSS_ENTROPY);
     MNIST data = new MNIST();
-    ExtendMNIST data2 = new ExtendMNIST();
-    Network network = new Network(config, af, Error.MEAN_SQUARED);
-    network.train(data2.inputs(), data2.target(), 5, 0.005, Optimizer.MOMENTUM);
-    network.train(data.inputs(), data.target(), 10, 0.01, Optimizer.MOMENTUM);
-    network.train(data2.inputs(), data2.target(), 5, 0.005, Optimizer.MOMENTUM);
-    network.train(data.inputs(), data.target(), 5, 0.005, Optimizer.MOMENTUM);
+    //Network network = new Network("mynetwork.epsilon");
+    network.train(data.inputs(), data.target(), 5, 0.002, Optimizer.ADAM);
 
     network.export("mynetwork");
   }

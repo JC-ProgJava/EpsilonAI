@@ -37,6 +37,7 @@ public class NetworkTest {
       a[i] = in.nextDouble() / 255;
     }
     actual = in.nextDouble();
+    in.close();
     return a;
   }
 
