@@ -1,4 +1,4 @@
-package epsilon.util;
+package util;
 
 import epsilon.Network;
 import epsilon.Vector;

@@ -1,4 +1,4 @@
-package epsilon.util;
+package util;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
