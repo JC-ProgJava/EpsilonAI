@@ -6,7 +6,7 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.Arrays;
 
-public class initDatasetJCPJ {
+public final class initDatasetJCPJ {
   public static void main(String[] args) throws IOException {
     double[][] input = new double[107730][784];
     double[][] output = new double[107730][10];

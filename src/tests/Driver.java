@@ -6,11 +6,11 @@ import epsilon.dataset.MNIST;
 
 import java.io.IOException;
 
-public class Driver {
+public final class Driver {
   public static void main(String[] args) throws IOException {
-//    Network network = new Network("/Users/JC/IdeaProjects/EpsilonAI/mynetwork.epsilon");
-//    File file = new File("/Users/JC/Desktop/test.csv");
-//    FileWriter write = new FileWriter("/Users/JC/Desktop/results.csv");
+//    Network network = new Network("mynetwork.epsilon");
+//    File file = new File("test.csv");
+//    FileWriter write = new FileWriter("results.csv");
 //    write.write("ImageId,Label\n");
 //    int count = 1;
 //    Scanner in = new Scanner(file);
@@ -29,17 +29,16 @@ public class Driver {
 //    System.out.println("Done!");
 //    System.out.println(Arrays.toString(digits));
 
-    Vector config = new Vector(new int[]{784, 32, 10});
+    Vector config = new Vector(new int[]{784, 10});
 
     ActivationFunction[] af = new ActivationFunction[]{
             ActivationFunction.SIGMOID,
-            ActivationFunction.SOFTMAX
     };
 
-    Network network = new Network(config, af, Error.CROSS_ENTROPY);
+    Network network = new Network(config, af, Error.MEAN_SQUARED);
     MNIST data = new MNIST();
     //Network network = new Network("mynetwork.epsilon");
-    network.train(data.inputs(), data.target(), 5, 0.002, Optimizer.ADAM);
+    network.train(data.inputs(), data.target(), 5, 0.002, Optimizer.MOMENTUM, 100);
 
     network.export("mynetwork");
   }

@@ -9,14 +9,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
-public class NetworkTest {
+public final class NetworkTest {
   public static double actual = 0;
 
   public static void main(String[] args) throws IOException {
-    String filename = "/Users/JC/IdeaProjects/EpsilonAI/mynetwork.epsilon";
+    String filename = "mynetwork.epsilon";
     ArrayList<String> filenames = new ArrayList<>();
     for (int x = 60001; x <= 70000; x++) {
-      filenames.add("/Users/JC/Desktop/Digit-Recogn/data/" + String.format("%05d", x) + ".txt");
+      filenames.add("data/" + String.format("%05d", x) + ".txt");
     }
 
     Network network = new Network(filename);

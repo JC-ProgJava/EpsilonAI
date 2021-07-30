@@ -14,9 +14,15 @@ public class Network implements Serializable {
 
     try (ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(new FileInputStream(filepath)))) {
       Object[] objects = (Object[]) ois.readObject();
+
+      if (objects.length < 4) {
+        throw new IllegalArgumentException("Network(file): You're network cannot be imported with this version of EpsilonAI. Consider reverting to a previous version.\nSorry for all inconveniences caused.");
+      }
+
       double[][][] weights = (double[][][]) objects[0];
-      ActivationFunction[] activationFunctions = (ActivationFunction[]) objects[1];
-      Error type = (Error) objects[2];
+      double[] bias = (double[]) objects[1];
+      ActivationFunction[] activationFunctions = (ActivationFunction[]) objects[2];
+      Error type = (Error) objects[3];
       boolean isOutputLayer = false;
       layers = new Layer[weights.length];
 
@@ -28,11 +34,12 @@ public class Network implements Serializable {
         if (i == weights.length - 1) {
           isOutputLayer = true;
         }
-        Layer matrix = new Layer(vectors, isOutputLayer, activationFunctions[i], type);
+        Layer matrix = new Layer(vectors, bias[i], isOutputLayer, activationFunctions[i], type);
         layers[i] = matrix;
       }
     } catch (IOException | ClassNotFoundException | ClassCastException e) {
-      e.printStackTrace();
+      System.err.println("An error occurred when importing an exported network.");
+      System.err.println(e);
     }
   }
 
@@ -74,9 +81,19 @@ public class Network implements Serializable {
     }
   }
 
-  public void train(double[][] input, double[][] target, int epoch, double alpha, Optimizer optimizer) {
+  public void train(double[][] input, double[][] target, int epoch, double alpha, Optimizer optimizer, int BATCH_SIZE) {
     if (input.length != target.length) {
-      throw new IllegalArgumentException("Input and target (expected) indices must have the same number of examples.");
+      throw new IllegalArgumentException("train(): Input and target (expected) indices must have the same number of examples.");
+    }
+
+    if (BATCH_SIZE <= 0) {
+      throw new IllegalArgumentException("train(): Batch size must be positive.");
+    } else if (input.length % BATCH_SIZE != 0) {
+      throw new IllegalArgumentException("train(): Batch size must evenly divide input dataset.");
+    }
+
+    for (Layer layer : layers) {
+      layer.setBatchSize(BATCH_SIZE);
     }
 
     for (int iter = 1; iter <= epoch; iter++) {
@@ -103,6 +120,10 @@ public class Network implements Serializable {
         System.out.println("Epoch: " + iter + " Error: " + layers[layers.length - 1].getDisplayError().total());
       }
     }
+
+    for (Layer layer : layers) {
+      layer.clearCache();
+    }
   }
 
   public void export(String name) {
@@ -110,6 +131,7 @@ public class Network implements Serializable {
     System.out.printf("Exporting to %s.\n", name);
 
     double[][][] weights = new double[layers.length][][];
+    double[] bias = new double[layers.length];
     ActivationFunction[] activationFunctions = new ActivationFunction[layers.length];
     Error type = layers[layers.length - 1].getErrorType();
     for (int i = 0; i < layers.length; i++) {
@@ -119,9 +141,10 @@ public class Network implements Serializable {
       }
       activationFunctions[i] = layers[i].getActivationFunction();
       weights[i] = layerWeights;
+      bias[i] = layers[i].getBias();
     }
 
-    Object[] objects = {weights, activationFunctions, type};
+    Object[] objects = {weights, bias, activationFunctions, type};
 
     try (ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(name)))) {
       oos.writeObject(objects);

@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Scanner;
 
-public class initArray {
+public final class initArray {
   public static void main(String[] args) throws IOException {
     int testAmount = 60000;
     long start = System.currentTimeMillis();
@@ -19,7 +19,7 @@ public class initArray {
     Collections.shuffle(arr);
 
     for (int index = 0; index < testAmount; index++) {
-      File file = new File("/Users/JC/Desktop/Digit-Recogn/data/" + String.format("%05d", arr.get(index) + 1) + ".txt");
+      File file = new File("data/" + String.format("%05d", arr.get(index) + 1) + ".txt");
 
       FileInputStream fis = new FileInputStream(file);
       byte[] data = new byte[(int) file.length()];
