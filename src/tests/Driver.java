@@ -1,14 +1,12 @@
 package tests;
 
-import epsilon.*;
-import epsilon.Error;
-import epsilon.dataset.*;
+import epsilon.ActivationFunction;
+import epsilon.Network;
+import epsilon.Optimizer;
+import epsilon.Vector;
+import epsilon.dataset.MNIST;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Scanner;
 
 public final class Driver {
   public static void main(String[] args) throws IOException {
@@ -33,18 +31,19 @@ public final class Driver {
 //    System.out.println("Done!");
 //    System.out.println(Arrays.toString(digits));
 
-    Vector config = new Vector(new int[]{784, 256, 10});
+    Vector config = new Vector(new int[]{784, 128, 64, 10});
 
     ActivationFunction[] af = new ActivationFunction[]{
+            ActivationFunction.SIGMOID,
             ActivationFunction.SIGMOID,
             ActivationFunction.SOFTMAX
     };
 
-    Network network = new Network(config, af, Error.CROSS_ENTROPY);
+    //Network network = new Network(config, af, Error.CROSS_ENTROPY);
     MNIST data = new MNIST();
-    //Network network = new Network("mynetwork.epsilon");
+    Network network = new Network("mynetwork.epsilon");
     network.setVerbose(true);
-    network.train(data.inputs(), data.target(), 5, 0.001, Optimizer.ADAM, 100);
+    network.train(data.inputs(), data.target(), 5, 0.001, Optimizer.MOMENTUM, 100);
 
     System.out.println(network);
     network.export("mynetwork");

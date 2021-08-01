@@ -7,18 +7,21 @@ import java.util.Scanner;
 
 public final class initArray {
   public static void main(String[] args) throws IOException {
-    int testAmount = 60000;
     long start = System.currentTimeMillis();
     ArrayList<Integer> arr = new ArrayList<>();
-    double[][] inputValues = new double[testAmount][784];
-    double[][] targetValues = new double[testAmount][10];
+    double[][] inputValues = new double[10000][784];
+    double[][] targetValues = new double[10000][10];
 
-    for (int i = 0; i < 60000; i++) {
+    for (int i = 60000; i < 70000; i++) {
       arr.add(i);
     }
     Collections.shuffle(arr);
 
-    for (int index = 0; index < testAmount; index++) {
+    for (int index = 0; index < 10000; index++) {
+      if (index % 1000 == 0) {
+        System.out.println((index) + " / " + 10000);
+      }
+
       File file = new File("data/" + String.format("%05d", arr.get(index) + 1) + ".txt");
 
       FileInputStream fis = new FileInputStream(file);
