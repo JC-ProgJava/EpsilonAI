@@ -6,6 +6,7 @@ import java.nio.file.Path;
 
 public class Network implements Serializable {
   private Layer[] layers;
+  private boolean verbose = false;
 
   public Network(String filepath) {
     if (!Files.exists(Path.of(filepath))) {
@@ -64,6 +65,8 @@ public class Network implements Serializable {
       throw new IllegalArgumentException("Network(Vector, ActivationFunction[], Error, InitChoice): Vector length must be one more than ActivationFunction[] length.");
     }
 
+    layers = new Layer[activationFunction.length];
+
     for (int i = 0; i < config.length() - 1; i++) {
       Layer layer = new Layer(i == (config.length() - 2), activationFunction[i], errorType);
       switch (initChoice) {
@@ -79,6 +82,10 @@ public class Network implements Serializable {
       }
       layers[i] = layer;
     }
+  }
+
+  public void setVerbose(boolean isVerbose) {
+    verbose = isVerbose;
   }
 
   public void train(double[][] input, double[][] target, int epoch, double alpha, Optimizer optimizer, int BATCH_SIZE) {
@@ -98,7 +105,7 @@ public class Network implements Serializable {
 
     for (int iter = 1; iter <= epoch; iter++) {
       for (int index = 0; index < input.length; index++) {
-        if (index % 1000 == 0 && index > 0) {
+        if (index % 1000 == 0 && index > 0 && verbose) {
           System.out.println(index + " / " + input.length);
         }
         // todo() <--
@@ -159,5 +166,28 @@ public class Network implements Serializable {
       out = layers[index].test(out);
     }
     return out;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder out = new StringBuilder();
+    out.append("Network with ").append(layers.length).append(" layers.\n");
+    out.append("Size: {");
+    out.append(layers[0].get(0).length()).append(", ");
+    for (int i = 0; i < layers.length; i++) {
+      out.append(layers[i].length());
+      if (i != layers.length - 1) {
+        out.append(", ");
+      } else {
+        out.append("}\n");
+      }
+    }
+    for (int i = 0; i < layers.length; i++) {
+      out.append("\n\tLayer ").append(i + 1).append(":\n");
+      out.append("\t\tSize: ").append(layers[i].get(0).length()).append("-").append(layers[i].length());
+      out.append("\n\t\tActivation Function: ").append(layers[i].getActivationFunction());
+      out.append("\n\t\tError: ").append(layers[i].getErrorType());
+    }
+    return out.toString();
   }
 }
