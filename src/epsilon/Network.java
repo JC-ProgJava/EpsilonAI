@@ -7,6 +7,7 @@ import java.nio.file.Path;
 public class Network implements Serializable {
   private Layer[] layers;
   private boolean verbose = false;
+  private boolean useDefaultLearningRate = false;
 
   public Network(String filepath) {
     if (!Files.exists(Path.of(filepath))) {
@@ -79,6 +80,8 @@ public class Network implements Serializable {
         case GAUSSIAN:
           layer = layer.fillGaussian((int) config.get(i), (int) config.get(i + 1));
           break;
+        default:
+          throw new IllegalArgumentException("Network(): No such InitChoice '" + initChoice + "'.");
       }
       layers[i] = layer;
     }
@@ -86,6 +89,10 @@ public class Network implements Serializable {
 
   public void setVerbose(boolean isVerbose) {
     verbose = isVerbose;
+  }
+
+  public void useDefaultLearningRate(boolean isDefaultLearningRate) {
+    this.useDefaultLearningRate = isDefaultLearningRate;
   }
 
   public void train(double[][] input, double[][] target, int epoch, double alpha, Optimizer optimizer, int BATCH_SIZE) {
@@ -103,11 +110,23 @@ public class Network implements Serializable {
       layer.setBatchSize(BATCH_SIZE);
     }
 
+    if (useDefaultLearningRate) {
+      if (optimizer == Optimizer.ADAGRAD || optimizer == Optimizer.NONE || optimizer == Optimizer.MOMENTUM) {
+        alpha = 0.01;
+      } else if (optimizer == Optimizer.RMSPROP || optimizer == Optimizer.ADAM) {
+        alpha = 0.001;
+      } else if (optimizer == Optimizer.ADADELTA) {
+        alpha = 1.0;
+      }
+    }
+
     for (int iter = 1; iter <= epoch; iter++) {
+      long start = System.currentTimeMillis();
       for (int index = 0; index < input.length; index++) {
         if (index % 1000 == 0 && index > 0 && verbose) {
           System.out.println(index + " / " + input.length);
         }
+
         // todo() <--
         layers[0].feed(new Vector(input[index]));
         // --> Optimize: creates object for each input (60000 total in MNIST)
@@ -124,7 +143,7 @@ public class Network implements Serializable {
         }
       }
       if (epoch < 100 || iter % 50 == 0) {
-        System.out.println("Epoch: " + iter + " Error: " + layers[layers.length - 1].getDisplayError().total());
+        System.out.println("Epoch: " + iter + " Error: " + layers[layers.length - 1].getDisplayError().total() + " Time: " + ((System.currentTimeMillis() - start) / 1000.0) + " seconds.");
       }
     }
 
@@ -179,7 +198,7 @@ public class Network implements Serializable {
       if (i != layers.length - 1) {
         out.append(", ");
       } else {
-        out.append("}\n");
+        out.append("}");
       }
     }
     for (int i = 0; i < layers.length; i++) {

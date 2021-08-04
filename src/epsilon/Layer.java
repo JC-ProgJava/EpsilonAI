@@ -152,6 +152,8 @@ class Layer implements Serializable {
           break;
         case SOFTMAX:
           return softmax(val);
+        default:
+          throw new IllegalArgumentException("activation(): No such ActivationFunction '" + activationFunction + "'.");
       }
     }
 
@@ -255,14 +257,6 @@ class Layer implements Serializable {
       } else {
         displayError = displayError.mult(0.0);
       }
-    }
-
-    if (optimizer == Optimizer.ADAGRAD || optimizer == Optimizer.NONE) {
-      alpha = 0.01;
-    } else if (optimizer == Optimizer.RMSPROP || optimizer == Optimizer.ADAM) {
-      alpha = 0.001;
-    } else if (optimizer == Optimizer.ADADELTA) {
-      alpha = 1.0;
     }
 
     for (int index = 0; index < vectors().length; index++) {
