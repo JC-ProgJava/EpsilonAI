@@ -1,21 +1,23 @@
 package tests;
 
+import epsilon.ActivationFunction;
 import epsilon.Error;
-import epsilon.*;
-import epsilon.dataset.QMNIST;
+import epsilon.Optimizer;
+import epsilon.dataset.MNIST;
+import epsilon.fast.Network;
 
-public final class Driver {
+public final class DriverFast {
   public static void main(String[] args) {
-    Vector config = new Vector(new int[]{784, 64, 32, 10});
+    double[] config = new double[]{784, 64, 32, 10};
 
     ActivationFunction[] af = new ActivationFunction[]{
-            ActivationFunction.LEAKY_RELU,
+            ActivationFunction.SIGMOID,
             ActivationFunction.LEAKY_RELU,
             ActivationFunction.SOFTMAX
     };
 
-    Network network = new Network(config, af, Error.CROSS_ENTROPY, InitChoice.GAUSSIAN);
-    QMNIST mnist = new QMNIST().subset(0, 110000);
+    Network network = new Network(config, af, Error.CROSS_ENTROPY);
+    MNIST mnist = new MNIST().subset(0, 60000);
 
     Network network2 = new Network("mynetwork.epsilon");
     network.setVerbose(true);
@@ -57,7 +59,7 @@ public final class Driver {
       RMSPROP - 9025
      */
 
-    QMNIST test = new QMNIST().subset(110000, 120000);
+    MNIST test = new MNIST().subset(60000, 70000);
 
     network.train(mnist.inputs(), mnist.target(), 5, 0.01, Optimizer.ADAM, 1);
 
@@ -98,12 +100,12 @@ public final class Driver {
     network.export("mynetwork");
   }
 
-  public static int getMax(Vector output) {
+  public static int getMax(double[] output) {
     int index = 0;
     double val = Double.NEGATIVE_INFINITY;
-    for (int i = 0; i < output.length(); i++) {
-      if (output.get(i) > val) {
-        val = output.get(i);
+    for (int i = 0; i < output.length; i++) {
+      if (output[i] > val) {
+        val = output[i];
         index = i;
       }
     }

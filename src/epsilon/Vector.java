@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Random;
 
-public class Vector implements Serializable {
+public final class Vector implements Serializable {
   transient private final Random rand = new Random();
   private double[] vect;
 
@@ -68,7 +68,9 @@ public class Vector implements Serializable {
 
     int size = length();
     Vector sum = new Vector(size);
+
     for (int i = 0; i < size; i++) {
+
       sum.set(i, get(i) + vec2.get(i));
     }
 
@@ -120,6 +122,7 @@ public class Vector implements Serializable {
 
     int size = length();
     Vector prod = new Vector(length());
+    
     for (int i = 0; i < size; i++) {
       prod.set(i, get(i) * vec2.get(i));
     }

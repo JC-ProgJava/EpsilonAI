@@ -1,6 +1,6 @@
 package epsilon.dataset;
 
-public class MNIST extends Dataset {
+public final class MNIST extends Dataset {
   public MNIST() {
     super("MNIST");
   }

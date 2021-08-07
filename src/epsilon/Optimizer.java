@@ -6,5 +6,6 @@ public enum Optimizer {
   ADAGRAD,
   ADADELTA,
   RMSPROP,
-  ADAM
+  ADAM,
+  NESTEROV
 }

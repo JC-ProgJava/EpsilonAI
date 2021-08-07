@@ -38,6 +38,8 @@ class Dataset {
       ObjectInputStream oiss = new ObjectInputStream(new BufferedInputStream(new FileInputStream(path.getParent().toString() + File.separator + name + File.separator + "target.ser")));
       inputs = (double[][]) ois.readObject();
       target = (double[][]) oiss.readObject();
+      ois.close();
+      oiss.close();
     } catch (IOException | ClassNotFoundException | NullPointerException ex) {
       ex.printStackTrace();
     }

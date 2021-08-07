@@ -5,6 +5,7 @@ public enum ActivationFunction {
   SIGMOID,
   TANH,
   RELU,
+  ELU,
   LEAKY_RELU,
   SOFTPLUS,
   SOFTMAX

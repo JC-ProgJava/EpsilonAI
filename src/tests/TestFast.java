@@ -1,7 +1,6 @@
 package tests;
 
-import epsilon.Network;
-import epsilon.Vector;
+import epsilon.fast.Network;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -9,7 +8,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Scanner;
 
-public final class Test {
+public final class TestFast {
   public static void main(String[] args) throws IOException {
     Network network = new Network("mynetwork.epsilon");
     File file = new File("test.csv");
@@ -34,12 +33,12 @@ public final class Test {
     System.out.println(Arrays.toString(digits));
   }
 
-  public static int getMax(Vector output) {
+  public static int getMax(double[] output) {
     int index = 0;
     double val = Double.NEGATIVE_INFINITY;
-    for (int i = 0; i < output.length(); i++) {
-      if (output.get(i) > val) {
-        val = output.get(i);
+    for (int i = 0; i < output.length; i++) {
+      if (output[i] > val) {
+        val = output[i];
         index = i;
       }
     }

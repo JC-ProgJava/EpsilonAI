@@ -2,8 +2,9 @@ package epsilon;
 
 import java.io.Serializable;
 import java.util.Random;
+import java.util.stream.IntStream;
 
-class Layer implements Serializable {
+final class Layer implements Serializable {
   private final boolean isOutputLayer;
   private final ActivationFunction activationFunction;
   private final Error errorType;
@@ -152,12 +153,19 @@ class Layer implements Serializable {
           break;
         case SOFTMAX:
           return softmax(val);
+        case ELU:
+          out.set(index, elu(val.get(index)));
+          break;
         default:
           throw new IllegalArgumentException("activation(): No such ActivationFunction '" + activationFunction + "'.");
       }
     }
 
     return out;
+  }
+
+  private double elu(double val) {
+    return val > 0 ? val : Math.exp(val) - 1.0;
   }
 
   private double sigmoid(double val) {
@@ -185,11 +193,11 @@ class Layer implements Serializable {
       total += Math.exp(val.get(i));
     }
 
-    if (total == 0) {
+    if (total == 0.0) {
       throw new ArithmeticException("softmax(Vector val): total is 0, cannot divide by 0.");
     }
     for (int i = 0; i < valLength; i++) {
-      out.set(i, Math.exp(val.get(i)) / total);
+      out.set(i, (Math.exp(val.get(i)) / total));
     }
 
     return out;
@@ -206,7 +214,10 @@ class Layer implements Serializable {
       case IDENTITY:
         return new Vector(output.length()).fill(1.0);
       case TANH:
-        return activation(output).mult(activation(output)).mult(-1.0).add(1.0);
+        for (int i = 0; i < outLength; i++) {
+          returnVector.set(i, 1.0 - sigmoid(output.get(i)) * sigmoid(output.get(i)));
+        }
+        return returnVector;
       case RELU: {
         for (int i = 0; i < outLength; i++) {
           returnVector.set(i, output.get(i) < 0.0 ? 0.0 : 1.0);
@@ -238,6 +249,17 @@ class Layer implements Serializable {
 
         return returnVector;
       }
+      case ELU: {
+        for (int i = 0; i < outLength; i++) {
+          if (output.get(i) >= 0) {
+            returnVector.set(i, 1.0);
+          } else {
+            returnVector.set(i, Math.exp(output.get(i)));
+          }
+        }
+
+        return returnVector;
+      }
       default:
         throw new IllegalArgumentException(activationFunction + " is not a valid ActivationFunction type.");
     }
@@ -259,7 +281,9 @@ class Layer implements Serializable {
       }
     }
 
-    for (int index = 0; index < vectors().length; index++) {
+    IntStream stream = IntStream.range(0, vectors.length);
+
+    stream.parallel().forEach(index -> {
       Vector error;
       if (isOutputLayer) {
         Vector[] errorCalc = calcError(output, targetOutput, index);
@@ -277,7 +301,8 @@ class Layer implements Serializable {
       delta = applyOptimizer(delta, index, alpha);
       deltas[index] = deltas[index].add(delta);
       deltaBias += error.get(index) * alpha;
-    }
+    });
+
     currentInputBatchId++;
 
     if (currentInputBatchId == BATCH_SIZE) {
@@ -374,6 +399,11 @@ class Layer implements Serializable {
         delta = prevUpdate[index].div(1.0 - beta1).mult(finalAlpha);
         break;
       }
+      case NESTEROV: {
+        delta = (delta.subtract(prevUpdate[index].mult(0.9))).mult(alpha).add(prevUpdate[index].mult(0.9));
+        prevUpdate[index] = delta;
+        break;
+      }
       default: {
         delta = delta.mult(alpha);
         break;
@@ -385,7 +415,7 @@ class Layer implements Serializable {
   void initOptimizer(int size, int numVectors) {
     if (prevUpdate == null) {
       prevUpdate = new Vector[numVectors];
-      if (optimizer == Optimizer.MOMENTUM || optimizer == Optimizer.ADAGRAD || optimizer == Optimizer.RMSPROP) {
+      if (optimizer == Optimizer.MOMENTUM || optimizer == Optimizer.ADAGRAD || optimizer == Optimizer.RMSPROP || optimizer == Optimizer.NESTEROV) {
         for (int i = 0; i < numVectors; i++) {
           prevUpdate[i] = new Vector(size).fillZeros();
         }
@@ -415,24 +445,19 @@ class Layer implements Serializable {
     return this;
   }
 
-  Layer fillGaussian(int size, int numVectors, double average, double deviation) {
-    if (size < 0) {
-      throw new IllegalArgumentException("init(size, start, end): 'size' must be bigger than 0. Given value: '" + size + "'.");
-    }
-
+  void fillGaussian(double average, double deviation) {
+    int numVectors = this.vectors.length;
     set(new Vector[numVectors]);
-
+    
     for (int i = 0; i < numVectors; i++) {
-      set(i, new Vector(size).fillGaussian(average, deviation));
+      set(i, new Vector(this.vectors[i].length()).fillGaussian(average, deviation));
     }
 
     bias = new Random().nextGaussian() * average + deviation;
     initDeltaArray();
-
-    return this;
   }
 
-  Layer fillZeros(int size, int numVectors) {
+  void fillZeros(int size, int numVectors) {
     set(new Vector[numVectors]);
     for (int i = 0; i < numVectors; i++) {
       set(i, new Vector(size).fillZeros());
@@ -440,11 +465,9 @@ class Layer implements Serializable {
 
     bias = 0.0;
     initDeltaArray();
-
-    return this;
   }
 
-  Layer fillRandom(int size, int numVectors) {
+  void fillRandom(int size, int numVectors) {
     set(new Vector[numVectors]);
     for (int i = 0; i < numVectors; i++) {
       set(i, new Vector(size).fillRandom());
@@ -452,7 +475,5 @@ class Layer implements Serializable {
 
     bias = new Random().nextDouble();
     initDeltaArray();
-
-    return this;
   }
 }

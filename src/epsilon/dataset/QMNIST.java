@@ -1,6 +1,6 @@
 package epsilon.dataset;
 
-public class QMNIST extends Dataset {
+public final class QMNIST extends Dataset {
   public QMNIST() {
     super("QMNIST");
   }
