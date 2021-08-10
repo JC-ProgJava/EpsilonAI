@@ -20,42 +20,6 @@ public final class Driver {
     Network network2 = new Network("mynetwork.epsilon");
     network.setVerbose(true);
     network.useDefaultLearningRate(true);
-    /*
-    MEAN_SQUARED
-    Sigmoid
-    Batch-20
-    Alpha: 0.001
-    Epoch: 5
-    RMSPROP - 8972
-    ADAM - 8898
-    NONE - 8759
-    MOMENTUM - 8753
-    ADADELTA - 8475
-    ADAGRAD - 8020
-
-    CROSS_ENTROPY
-    Softmax
-    Batch-20
-    Alpha: 0.001
-    Epoch: 5
-    ADAM - 8891
-
-
-    MEAN_SQUARED
-    Sigmoid
-    Alpha: 0.001
-    Epoch: 15
-    Batch-1
-      RMSPROP - 9053, 9042
-    Batch-10
-      RMSPROP - 9050
-    Batch-20
-      RMSPROP - 9019
-    Batch-40
-      RMSPROP - 9031
-    Batch-100
-      RMSPROP - 9025
-     */
 
     QMNIST test = new QMNIST().subset(110000, 120000);
 

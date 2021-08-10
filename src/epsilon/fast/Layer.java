@@ -3,25 +3,30 @@ package epsilon.fast;
 import epsilon.ActivationFunction;
 import epsilon.Error;
 import epsilon.Optimizer;
+import epsilon.Regularization;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.stream.IntStream;
 
-final class Layer implements Serializable {
+public final class Layer implements Serializable {
   private static final Random rand = new Random();
   private final boolean isOutputLayer;
   private final ActivationFunction activationFunction;
   private final Error errorType;
+  private ArrayList<Regularization> regularization = new ArrayList<>();
   private double[][] vectors;
-  private double bias;
+  private double[] bias;
   private int BATCH_SIZE;
   private int currentInputBatchId = 0;
+  private Layer nextLayer;
+  transient private double[] targetOutput;
   transient private double[][] deltas;
   transient private double[][] prevUpdate;
   transient private double[][] adaptDelta;
-  transient private double deltaBias;
+  transient private double[] deltaBias;
   transient private Optimizer optimizer;
   transient private double[] input;
   transient private double[] output;
@@ -34,7 +39,7 @@ final class Layer implements Serializable {
     this.errorType = errorType;
   }
 
-  Layer(double[][] vectorList, double bias, boolean isOutputLayer, ActivationFunction activationFunction, Error errorType) {
+  public Layer(double[][] vectorList, double[] bias, boolean isOutputLayer, ActivationFunction activationFunction, Error errorType) {
     vectors = vectorList;
     this.isOutputLayer = isOutputLayer;
     this.activationFunction = activationFunction;
@@ -170,7 +175,7 @@ final class Layer implements Serializable {
     return log;
   }
 
-  static double[] initGaussianDistribute(double[] vec) {
+  static double[] fillGaussian(double[] vec) {
     for (int i = 0; i < vec.length; i++) {
       vec[i] = rand.nextGaussian();
     }
@@ -179,9 +184,14 @@ final class Layer implements Serializable {
 
   static double[] fillGaussian(double[] vec, double average, double deviation) {
     for (int i = 0; i < vec.length; i++) {
-      vec[i] = rand.nextGaussian() * average + deviation;
+      vec[i] = rand.nextGaussian() * deviation + average;
     }
     return vec;
+  }
+
+  Layer setRegularization(ArrayList<Regularization> regularization) {
+    this.regularization = regularization;
+    return this;
   }
 
   private void initDeltaArray() {
@@ -189,6 +199,8 @@ final class Layer implements Serializable {
     for (int i = 0; i < vectors.length; i++) {
       deltas[i] = new double[vectors[i].length];
     }
+
+    deltaBias = new double[vectors.length];
   }
 
   void setBatchSize(int BATCH_SIZE) {
@@ -226,7 +238,7 @@ final class Layer implements Serializable {
     return vectors[index];
   }
 
-  double getBias() {
+  double[] getBias() {
     return bias;
   }
 
@@ -418,6 +430,8 @@ final class Layer implements Serializable {
     }
 
     this.optimizer = optimizer;
+    this.targetOutput = targetOutput;
+    this.nextLayer = nextLayer;
     initOptimizer(vectors()[0].length, vectors().length);
 
     if (isOutputLayer) {
@@ -447,19 +461,20 @@ final class Layer implements Serializable {
       double[] delta = mult(input, error[index]);
       delta = applyOptimizer(delta, index, alpha);
       deltas[index] = add(deltas[index], delta);
-      deltaBias += error[index] * alpha;
+      deltaBias[index] += error[index] * alpha;
     });
 
     currentInputBatchId++;
 
     if (currentInputBatchId == BATCH_SIZE) {
       currentInputBatchId = 0;
+      applyRegularizer();
       for (int index = 0; index < vectors().length; index++) {
         vectors[index] = subtract(vectors[index], deltas[index]);
+        bias[index] -= deltaBias[index];
         deltas[index] = mult(deltas[index], 0.0);
+        deltaBias[index] = 0.0;
       }
-      bias -= deltaBias;
-      deltaBias = 0.0;
     }
   }
 
@@ -470,23 +485,19 @@ final class Layer implements Serializable {
   private double[][] calcError(double[] output, double[] targetOutput, int index) {
     switch (errorType) {
       case MEAN_SQUARED: {
-        double[] err = mult(subtract(output, targetOutput), derivative(index));
-        return new double[][]{err, mult(err, err)};
+        double[] err = subtract(output, targetOutput);
+        return new double[][]{mult(err, derivative(index)), mult(err, err)};
       }
       case MEAN_ABSOLUTE: {
-        double[] display = subtract(output, targetOutput);
-        double[] err = new double[display.length];
+        double[] err = subtract(output, targetOutput);
         for (int i = 0; i < err.length; i++) {
-          display[i] = display[i] > 0 ? display[i] : -display[i];
-          err[i] = output[i] >= targetOutput[i] ? -1 : 1;
+          err[i] = err[i] >= 0 ? err[i] : -err[i];
         }
-        err = mult(err, derivative(index));
-        return new double[][]{err, display};
+        return new double[][]{mult(err, derivative(index)), err};
       }
       case CROSS_ENTROPY: {
         double[] display = mult(mult(targetOutput, log(output)), -1.0);
-        double[] err = subtract(output, targetOutput);
-        return new double[][]{err, display};
+        return new double[][]{subtract(output, targetOutput), display};
       }
       default:
         throw new IllegalArgumentException("calcError(): Error type " + errorType + " unknown.");
@@ -547,8 +558,8 @@ final class Layer implements Serializable {
         break;
       }
       case NESTEROV: {
-        delta = add(mult((subtract(delta, mult(prevUpdate[index], 0.9))), alpha), mult(prevUpdate[index], 0.9));
-        prevUpdate[index] = delta;
+        prevUpdate[index] = add(mult(prevUpdate[index], 0.9), mult(nesterovGradient(subtract(vectors[index], mult(prevUpdate[index], 0.9)), index), alpha));
+        delta = prevUpdate[index];
         break;
       }
       default: {
@@ -559,10 +570,55 @@ final class Layer implements Serializable {
     return delta;
   }
 
+  void applyRegularizer() {
+    for (double[] vector : vectors) {
+      if (regularization.contains(Regularization.L1)) {
+        for (int i = 0; i < vector.length; i++) {
+          if (vector[i] >= 0) {
+            vector[i] += 0.001;
+          } else {
+            vector[i] -= 0.001;
+          }
+        }
+      } else if (regularization.contains(Regularization.L2)) {
+        for (int i = 0; i < vector.length; i++) {
+          vector[i] -= 0.001 * vector[i];
+        }
+      }
+    }
+  }
+
+  private double[] nesterovGradient(double[] newWeights, int index) {
+    double[] output = new double[vectors().length];
+    for (int i = 0; i < vectors().length; i++) {
+      if (index != i) {
+        output[i] = total(mult(vectors()[i], input));
+      } else {
+        output[i] = total(mult(newWeights, input));
+      }
+    }
+
+    output = add(output, bias);
+    output = activation(output);
+
+    double[] error;
+    if (isOutputLayer) {
+      double[][] errorCalc = calcError(output, targetOutput, index);
+      error = errorCalc[0];
+    } else {
+      error = new double[vectors().length];
+      for (int indice = 0; indice < nextLayer.vectors().length; indice++) {
+        error = add(error, nextLayer.vectors()[indice][index] * nextLayer.getError()[indice]);
+      }
+      error = mult(error, derivative(index));
+    }
+    return mult(input, error[index]);
+  }
+
   void initOptimizer(int size, int numVectors) {
     if (prevUpdate == null) {
       prevUpdate = new double[numVectors][];
-      if (optimizer == Optimizer.MOMENTUM || optimizer == Optimizer.ADAGRAD || optimizer == Optimizer.RMSPROP) {
+      if (optimizer == Optimizer.MOMENTUM || optimizer == Optimizer.ADAGRAD || optimizer == Optimizer.RMSPROP || optimizer == Optimizer.NESTEROV) {
         for (int i = 0; i < numVectors; i++) {
           prevUpdate[i] = new double[size];
         }
@@ -583,24 +639,25 @@ final class Layer implements Serializable {
   Layer fillGaussian(int size, int numVectors) {
     this.set(new double[numVectors][]);
     for (int i = 0; i < numVectors; i++) {
-      this.set(i, initGaussianDistribute(new double[size]));
+      this.set(i, fillGaussian(new double[size]));
     }
 
-    bias = new Random().nextGaussian();
+    bias = fillGaussian(new double[numVectors]);
     initDeltaArray();
 
     return this;
   }
 
   void fillGaussian(double average, double deviation) {
-    int numVectors = this.vectors.length;
-    this.set(new double[numVectors][]);
+    double[][] replaceVect = new double[vectors.length][];
 
-    for (int i = 0; i < numVectors; i++) {
-      set(i, fillGaussian(new double[this.vectors[i].length], average, deviation));
+    for (int i = 0; i < replaceVect.length; i++) {
+      replaceVect[i] = fillGaussian(new double[this.vectors[i].length], average, deviation);
     }
 
-    bias = new Random().nextGaussian() * average + deviation;
+    bias = fillGaussian(new double[vectors.length], average, deviation);
+
+    set(replaceVect);
     initDeltaArray();
   }
 
@@ -610,9 +667,8 @@ final class Layer implements Serializable {
       this.set(i, new double[size]);
     }
 
-    bias = 0.0;
+    bias = new double[vectors.length];
     initDeltaArray();
-
   }
 
   void fillRandom(int size, int numVectors) {
@@ -621,12 +677,8 @@ final class Layer implements Serializable {
       this.set(i, fillRandom(new double[size]));
     }
 
-    bias = new Random().nextDouble();
+    bias = fillRandom(new double[numVectors]);
     initDeltaArray();
-  }
-
-  double[] fillZeros(double[] vec) {
-    return fill(vec, 0.0);
   }
 
   double[] fillRandom(double[] vec) {

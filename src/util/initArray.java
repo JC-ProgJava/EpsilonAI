@@ -12,10 +12,17 @@ public final class initArray {
     double[][] inputValues = new double[70000][784];
     double[][] targetValues = new double[70000][10];
 
-    for (int i = 1; i <= 70000; i++) {
+    for (int i = 1; i <= 60000; i++) {
       arr.add(i);
     }
     Collections.shuffle(arr);
+
+    ArrayList<Integer> test = new ArrayList<>();
+    for (int i = 60001; i <= 70000; i++) {
+      test.add(i);
+    }
+    Collections.shuffle(test);
+    arr.addAll(test);
 
     for (int index = 0; index < 70000; index++) {
       if (index % 1000 == 0) {

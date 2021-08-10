@@ -3,63 +3,28 @@ package tests;
 import epsilon.ActivationFunction;
 import epsilon.Error;
 import epsilon.Optimizer;
-import epsilon.dataset.MNIST;
+import epsilon.Regularization;
+import epsilon.dataset.QMNIST;
 import epsilon.fast.Network;
 
 public final class DriverFast {
   public static void main(String[] args) {
-    double[] config = new double[]{784, 64, 32, 10};
+    double[] config = new double[]{784, 128, 10};
 
     ActivationFunction[] af = new ActivationFunction[]{
-            ActivationFunction.SIGMOID,
             ActivationFunction.LEAKY_RELU,
             ActivationFunction.SOFTMAX
     };
 
-    Network network = new Network(config, af, Error.CROSS_ENTROPY);
-    MNIST mnist = new MNIST().subset(0, 60000);
+    Network network2 = new Network(config, af, Error.CROSS_ENTROPY).regularize(Regularization.L2);
+    network2.initCustomDistributedGaussian(0.0, 0.1);
+    QMNIST mnist = new QMNIST().subset(0, 100000);
 
-    Network network2 = new Network("mynetwork.epsilon");
-    network.setVerbose(true);
+    Network network = new Network("mynetwork.epsilon");
+    network.setVerbose(false);
     network.useDefaultLearningRate(true);
-    /*
-    MEAN_SQUARED
-    Sigmoid
-    Batch-20
-    Alpha: 0.001
-    Epoch: 5
-    RMSPROP - 8972
-    ADAM - 8898
-    NONE - 8759
-    MOMENTUM - 8753
-    ADADELTA - 8475
-    ADAGRAD - 8020
 
-    CROSS_ENTROPY
-    Softmax
-    Batch-20
-    Alpha: 0.001
-    Epoch: 5
-    ADAM - 8891
-
-
-    MEAN_SQUARED
-    Sigmoid
-    Alpha: 0.001
-    Epoch: 15
-    Batch-1
-      RMSPROP - 9053, 9042
-    Batch-10
-      RMSPROP - 9050
-    Batch-20
-      RMSPROP - 9019
-    Batch-40
-      RMSPROP - 9031
-    Batch-100
-      RMSPROP - 9025
-     */
-
-    MNIST test = new MNIST().subset(60000, 70000);
+    QMNIST test = new QMNIST().subset(100000, 120000);
 
     network.train(mnist.inputs(), mnist.target(), 5, 0.01, Optimizer.ADAM, 1);
 
@@ -77,6 +42,7 @@ public final class DriverFast {
         corrects += x == actual ? 1 : 0;
       }
       System.out.println("Training: " + corrects + " / " + (mnist.inputs().length) + " correct.");
+      System.out.println("Accuracy: " + String.format("%.2f", 100.0 * (double) corrects / (double) mnist.inputs().length) + "%");
     }
 
     {

@@ -21,7 +21,7 @@ public final class Vector implements Serializable {
     }
   }
 
-  Vector(double[] vals) {
+  public Vector(double[] vals) {
     assert vect.length == 0;
     vect = vals;
   }
@@ -122,7 +122,7 @@ public final class Vector implements Serializable {
 
     int size = length();
     Vector prod = new Vector(length());
-    
+
     for (int i = 0; i < size; i++) {
       prod.set(i, get(i) * vec2.get(i));
     }
@@ -193,7 +193,7 @@ public final class Vector implements Serializable {
     return log;
   }
 
-  Vector initGaussianDistribute() {
+  Vector fillGaussian() {
     for (int i = 0; i < length(); i++) {
       set(i, rand.nextGaussian());
     }
@@ -202,7 +202,7 @@ public final class Vector implements Serializable {
 
   Vector fillGaussian(double average, double deviation) {
     for (int i = 0; i < length(); i++) {
-      set(i, rand.nextGaussian() * average + deviation);
+      set(i, rand.nextGaussian() * deviation + average);
     }
     return this;
   }

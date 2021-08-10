@@ -3,8 +3,10 @@ package epsilon;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 
 public final class Network implements Serializable {
+  private ArrayList<Regularization> regularizations = new ArrayList<>();
   private Layer[] layers;
   private boolean verbose = false;
   private boolean useDefaultLearningRate = false;
@@ -17,14 +19,16 @@ public final class Network implements Serializable {
     try (ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(new FileInputStream(filepath)))) {
       Object[] objects = (Object[]) ois.readObject();
 
-      if (objects.length < 4) {
+      if (objects.length < 5) {
         throw new IllegalArgumentException("Network(file): You're network cannot be imported with this version of EpsilonAI. Consider reverting to a previous version.\nSorry for all inconveniences caused.");
       }
 
       double[][][] weights = (double[][][]) objects[0];
-      double[] bias = (double[]) objects[1];
+      double[][] bias = (double[][]) objects[1];
       ActivationFunction[] activationFunctions = (ActivationFunction[]) objects[2];
       Error type = (Error) objects[3];
+      ArrayList<Regularization> regularization = (ArrayList<Regularization>) objects[4];
+      this.regularizations = regularization;
       boolean isOutputLayer = false;
       layers = new Layer[weights.length];
 
@@ -36,13 +40,14 @@ public final class Network implements Serializable {
         if (i == weights.length - 1) {
           isOutputLayer = true;
         }
-        Layer matrix = new Layer(vectors, bias[i], isOutputLayer, activationFunctions[i], type);
+        Layer matrix = new Layer(vectors, new Vector(bias[i]), isOutputLayer, activationFunctions[i], type).setRegularization(regularization);
         layers[i] = matrix;
       }
     } catch (IOException | ClassNotFoundException | ClassCastException e) {
       System.err.println("An error occurred when importing an exported network.");
       System.err.println(e);
     }
+    System.out.println("Note: You are using an exported network.");
   }
 
   public Network(Vector config, ActivationFunction[] activationFunction, Error errorType) {
@@ -95,6 +100,18 @@ public final class Network implements Serializable {
     for (Layer layer : layers) {
       layer.fillGaussian(average, deviation);
     }
+  }
+
+  public Network regularize(Regularization regularizationTechnique) {
+    this.regularizations.add(regularizationTechnique);
+    for (Layer layer : layers) {
+      layer.setRegularization(regularizations);
+    }
+    return this;
+  }
+
+  public void removeAllRegularization() {
+    regularizations.clear();
   }
 
   public void setVerbose(boolean isVerbose) {
@@ -177,6 +194,10 @@ public final class Network implements Serializable {
           layers[layers.length - indice - 1].learn(null, layers[layers.length - indice], alpha, optimizer);
         }
       }
+      if (Double.isNaN(layers[layers.length - 1].getError().total())) {
+        System.err.println("Error exploded, producing NaN (not a number). Program terminated automatically.");
+        System.exit(-1);
+      }
       if (epoch < 100 || iter % 50 == 0) {
         System.out.println("Epoch: " + iter + " Error: " + layers[layers.length - 1].getDisplayError().total() + " Time: " + ((System.currentTimeMillis() - start) / 1000.0) + " seconds.");
       }
@@ -192,7 +213,7 @@ public final class Network implements Serializable {
     System.out.printf("Exporting to %s.\n", name);
 
     double[][][] weights = new double[layers.length][][];
-    double[] bias = new double[layers.length];
+    double[][] bias = new double[layers.length][];
     ActivationFunction[] activationFunctions = new ActivationFunction[layers.length];
     Error type = layers[layers.length - 1].getErrorType();
     for (int i = 0; i < layers.length; i++) {
@@ -202,15 +223,67 @@ public final class Network implements Serializable {
       }
       activationFunctions[i] = layers[i].getActivationFunction();
       weights[i] = layerWeights;
-      bias[i] = layers[i].getBias();
+      bias[i] = layers[i].getBias().values();
     }
 
-    Object[] objects = {weights, bias, activationFunctions, type};
+    Object[] objects = {weights, bias, activationFunctions, type, regularizations};
 
     try (ObjectOutputStream oos = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(name)))) {
       oos.writeObject(objects);
     } catch (IOException ex) {
       System.err.printf("Cannot export to %s.\n", name);
+    }
+  }
+
+  public void exportToExternal(String name) {
+    name += ".txt";
+    System.out.printf("Exporting to %s. You can read this file using other programming languages.\n", name);
+
+    double[][][] weights = new double[layers.length][][];
+    double[][] bias = new double[layers.length][];
+    for (int i = 0; i < layers.length; i++) {
+      double[][] layerWeights = new double[layers[i].length()][];
+      for (int j = 0; j < layerWeights.length; j++) {
+        layerWeights[j] = layers[i].get(j).values();
+      }
+      weights[i] = layerWeights;
+      bias[i] = layers[i].getBias().values();
+    }
+
+    try (FileWriter fileWriter = new FileWriter(name)) {
+      for (int i = 0; i < layers.length; i++) {
+        if (i != 0) {
+          fileWriter.write("!");
+        }
+        for (int j = 0; j < weights[i].length; j++) {
+          if (j != 0) {
+            fileWriter.write("\n");
+          }
+          for (int k = 0; k < weights[i][j].length; k++) {
+            if (k != 0) {
+              fileWriter.write(",");
+            }
+            fileWriter.write(String.valueOf(weights[i][j][k]));
+          }
+        }
+      }
+
+      fileWriter.write("\nbias:");
+
+      for (int i = 0; i < layers.length; i++) {
+        if (i != 0) {
+          fileWriter.write("\n");
+        }
+        for (int j = 0; j < bias[i].length; j++) {
+          if (j != 0) {
+            fileWriter.write(",");
+          }
+
+          fileWriter.write(String.valueOf(bias[i][j]));
+        }
+      }
+    } catch (IOException e) {
+      System.err.println("An error occurred during the export.");
     }
   }
 
@@ -224,8 +297,13 @@ public final class Network implements Serializable {
 
   @Override
   public String toString() {
+    int trainableParams = 0;
+    for (Layer layer : layers) {
+      trainableParams += (layer.get(0).length() + 1) * (layer.length());
+    }
     StringBuilder out = new StringBuilder();
-    out.append("Network with ").append(layers.length).append(" layers.\n");
+    out.append("Network with ").append(layers.length).append(" layers and ").append(trainableParams).append(" trainable parameters.\n");
+    System.out.println("Regularizers: " + regularizations);
     out.append("Size: {");
     out.append(layers[0].get(0).length()).append(", ");
     for (int i = 0; i < layers.length; i++) {
