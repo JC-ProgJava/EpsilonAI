@@ -241,7 +241,7 @@ final class Layer implements Serializable {
         return returnVector;
       }
       case SIGMOID:
-        return activation(output).mult(activation(output).mult(-1.0).add(1.0));
+        return output.mult(output.mult(-1.0).add(1.0));
       case SOFTPLUS: {
         for (int i = 0; i < outLength; i++) {
           returnVector.set(i, sigmoid(output.get(i)));
