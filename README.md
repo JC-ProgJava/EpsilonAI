@@ -4,6 +4,7 @@
   
 # EpsilonAI
 [![CodeFactor](https://www.codefactor.io/repository/github/jc-progjava/epsilonai/badge)](https://www.codefactor.io/repository/github/jc-progjava/epsilonai)
+![LOC](https://tokei.rs/b1/github/JC-ProgJava/EpsilonAI)
 
 A simple machine learning framework built for Java applications.
 
