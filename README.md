@@ -3,8 +3,6 @@
 </div>
   
 # EpsilonAI
-[![CodeFactor](https://www.codefactor.io/repository/github/jc-progjava/epsilonai/badge)](https://www.codefactor.io/repository/github/jc-progjava/epsilonai)
-![LOC](https://tokei.rs/b1/github/JC-ProgJava/EpsilonAI)
 
 A simple machine learning framework built for Java applications.
 
@@ -12,11 +10,11 @@ A simple machine learning framework built for Java applications.
 Take a look at the [documentation on Gitbook](https://jc-progjava.gitbook.io/epsilonai/).
 
 ## Installation
-To install EpsilonAI, you can head over to the [releases section](https://github.com/JC-ProgJava/EpsilonAI/releases/latest) and download the latest .jar (Java Archive) file.
+To install EpsilonAI, you can head over to the [releases section](https://github.com/ChJus/EpsilonAI/releases/latest) and download the latest .jar (Java Archive) file.
 
 Alternatively, you can download the source code and include it in your programs by typing the following command in Terminal:
 ```
-git clone https://github.com/JC-ProgJava/EpsilonAI
+git clone https://github.com/ChJus/EpsilonAI
 ```
 
 **Note that EpsilonAI requires Java 11+.**
